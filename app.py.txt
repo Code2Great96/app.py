@@ -1,0 +1,46 @@
+import streamlit as st
+import cv2
+import numpy as np
+from PIL import Image
+import io
+
+def count_pills(image):
+    """Counts pills in an image."""
+    try:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        edged = cv2.Canny(blurred, 50, 150)
+        kernel = np.ones((5, 5), np.uint8)
+        dilated = cv2.dilate(edged, kernel, iterations=3)
+        contours, _ = cv2.findContours(dilated.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(image, contours, -1, (0, 255, 0), 2)
+
+        return len(contours), image
+
+    except Exception as e:
+        st.error(f"Error processing image: {e}")
+        return None, None
+
+def main():
+    st.title("Pill Counter")
+
+    uploaded_file = st.file_uploader("Upload an image of pills", type=["jpg", "jpeg", "png"])
+
+    if uploaded_file is not None:
+        try:
+            image = Image.open(uploaded_file)
+            image_np = np.array(image)
+            pill_count, processed_image = count_pills(image_np.copy())
+
+            if pill_count is not None:
+                st.write(f"Number of pills detected: {pill_count}")
+                st.image(processed_image, caption="Processed Image with Contours", use_column_width=True)
+
+            else:
+                st.error("Pill counting failed. Please try another image.")
+
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()
